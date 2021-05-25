@@ -1,0 +1,180 @@
+diff --git a/folly/Uri-inl.h b/folly/Uri-inl.h
+index bd286f525..520d5ae4a 100644
+--- a/folly/Uri-inl.h
++++ b/folly/Uri-inl.h
+@@ -22,7 +22,7 @@
+ #include <tuple>
+ 
+ #include <folly/Conv.h>
+-#include <folly/hash/Hash.h>
++#include <folly/hash/StdHash.h>
+ 
+ namespace folly {
+ 
+diff --git a/folly/dynamic.cpp b/folly/dynamic.cpp
+index f145e2a46..f6133c2eb 100644
+--- a/folly/dynamic.cpp
++++ b/folly/dynamic.cpp
+@@ -22,7 +22,7 @@
+ 
+ #include <folly/Format.h>
+ #include <folly/container/Enumerate.h>
+-#include <folly/hash/Hash.h>
++#include <folly/hash/StdHash.h>
+ #include <folly/lang/Assume.h>
+ #include <folly/lang/Exception.h>
+ 
+diff --git a/folly/experimental/JSONSchema.cpp b/folly/experimental/JSONSchema.cpp
+index 245754858..631b8fb2f 100644
+--- a/folly/experimental/JSONSchema.cpp
++++ b/folly/experimental/JSONSchema.cpp
+@@ -14,6 +14,7 @@
+  * limitations under the License.
+  */
+ 
++#include <folly/hash/StdHash.h>
+ #include <folly/experimental/JSONSchema.h>
+ 
+ #include <boost/algorithm/string/replace.hpp>
+diff --git a/folly/fibers/FiberManager.cpp b/folly/fibers/FiberManager.cpp
+index a5b12fb70..145fedf17 100644
+--- a/folly/fibers/FiberManager.cpp
++++ b/folly/fibers/FiberManager.cpp
+@@ -15,6 +15,7 @@
+  */
+ 
+ #include <folly/fibers/FiberManagerInternal.h>
++#include <folly/hash/StdHash.h>
+ 
+ #include <csignal>
+ 
+diff --git a/folly/fibers/GuardPageAllocator.cpp b/folly/fibers/GuardPageAllocator.cpp
+index 7ab23e400..6e2e50d8a 100644
+--- a/folly/fibers/GuardPageAllocator.cpp
++++ b/folly/fibers/GuardPageAllocator.cpp
+@@ -15,6 +15,7 @@
+  */
+ 
+ #include <folly/fibers/GuardPageAllocator.h>
++#include <folly/hash/StdHash.h>
+ 
+ #ifndef _WIN32
+ #include <dlfcn.h>
+diff --git a/folly/hash/Hash.h b/folly/hash/Hash.h
+index ede79429f..6f2b7f2a5 100644
+--- a/folly/hash/Hash.h
++++ b/folly/hash/Hash.h
+@@ -756,41 +756,6 @@ struct TupleHasher<0, Ts...> {
+ 
+ } // namespace folly
+ 
+-// Custom hash functions.
+-namespace std {
+-// Hash function for pairs. Requires default hash functions for both
+-// items in the pair.
+-template <typename T1, typename T2>
+-struct hash<std::pair<T1, T2>> {
+-  using folly_is_avalanching = std::true_type;
+-
+-  size_t operator()(const std::pair<T1, T2>& x) const {
+-    return folly::hash::hash_combine(x.first, x.second);
+-  }
+-};
+-
+-// Hash function for tuples. Requires default hash functions for all types.
+-template <typename... Ts>
+-struct hash<std::tuple<Ts...>> {
+- private:
+-  using FirstT = std::decay_t<std::tuple_element_t<0, std::tuple<Ts..., bool>>>;
+-
+- public:
+-  using folly_is_avalanching = folly::bool_constant<(
+-      sizeof...(Ts) != 1 ||
+-      folly::IsAvalanchingHasher<std::hash<FirstT>, FirstT>::value)>;
+-
+-  size_t operator()(std::tuple<Ts...> const& key) const {
+-    folly::TupleHasher<
+-        sizeof...(Ts) - 1, // start index
+-        Ts...>
+-        hasher;
+-
+-    return hasher(key);
+-  }
+-};
+-} // namespace std
+-
+ namespace folly {
+ 
+ // std::hash<std::string> is avalanching on libstdc++-v3 (code checked),
+diff --git a/folly/hash/StdHash.h b/folly/hash/StdHash.h
+new file mode 100644
+index 000000000..88e7018e6
+--- /dev/null
++++ b/folly/hash/StdHash.h
+@@ -0,0 +1,54 @@
++/*
++ * Copyright (c) Facebook, Inc. and its affiliates.
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *     http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++#pragma once
++
++#include <folly/hash/Hash.h>
++
++// Custom hash functions.
++namespace std {
++// Hash function for pairs. Requires default hash functions for both
++// items in the pair.
++template <typename T1, typename T2>
++struct hash<std::pair<T1, T2>> {
++  using folly_is_avalanching = std::true_type;
++
++  size_t operator()(const std::pair<T1, T2>& x) const {
++    return folly::hash::hash_combine(x.first, x.second);
++  }
++};
++
++// Hash function for tuples. Requires default hash functions for all types.
++template <typename... Ts>
++struct hash<std::tuple<Ts...>> {
++ private:
++  using FirstT = std::decay_t<std::tuple_element_t<0, std::tuple<Ts..., bool>>>;
++
++ public:
++  using folly_is_avalanching = folly::bool_constant<(
++      sizeof...(Ts) != 1 ||
++      folly::IsAvalanchingHasher<std::hash<FirstT>, FirstT>::value)>;
++
++  size_t operator()(std::tuple<Ts...> const& key) const {
++    folly::TupleHasher<
++        sizeof...(Ts) - 1, // start index
++        Ts...>
++        hasher;
++
++    return hasher(key);
++  }
++};
++} // namespace std
+diff --git a/folly/hash/test/HashTest.cpp b/folly/hash/test/HashTest.cpp
+index e1b2c9f4a..66099c128 100644
+--- a/folly/hash/test/HashTest.cpp
++++ b/folly/hash/test/HashTest.cpp
+@@ -15,6 +15,7 @@
+  */
+ 
+ #include <folly/hash/Hash.h>
++#include <folly/hash/StdHash.h>
+ 
+ #include <stdint.h>
+ 

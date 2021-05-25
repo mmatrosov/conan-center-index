@@ -5,6 +5,9 @@ sources:
   "2020.08.10.00":
     url: "https://github.com/facebook/folly/archive/v2020.08.10.00.tar.gz"
     sha256: "e81140d04a4e89e3f848e528466a9b3d3ae37d7eeb9e65467fca50d70918eef6"
+  "2021.05.17.00":
+    url: "https://github.com/facebook/folly/archive/v2021.05.17.00.tar.gz"
+    sha256: "10449ec28542a8da0f93600b45d2be51ccb5debfcaad2c42d1cbdf6ad204510b"
 patches:
   "2019.10.21.00":
     - patch_file: "patches/0001-find-packages.patch"
@@ -37,4 +40,13 @@ patches:
     - patch_file: "patches/0014-find-librt.patch"
       base_path: "source_subfolder"
     - patch_file: "patches/0015-benchmark-format-macros.patch"
+      base_path: "source_subfolder"
+  "2021.05.17.00":
+    - patch_file: "patches/0012-compiler-flags.patch"
+      base_path: "source_subfolder"
+    - patch_file: "patches/0015-benchmark-format-macros.patch"
+      base_path: "source_subfolder"
+    - patch_file: "patches/0016-find-packages-2.patch"
+      base_path: "source_subfolder"
+    - patch_file: "patches/0017-std-hash.patch"
       base_path: "source_subfolder"
