@@ -1,16 +1,17 @@
 diff --git a/folly/Uri-inl.h b/folly/Uri-inl.h
-index bd286f525..55d3d2492 100644
+index bd286f525..118c3bb63 100644
 --- a/folly/Uri-inl.h
 +++ b/folly/Uri-inl.h
-@@ -86,7 +86,7 @@ namespace std {
+@@ -86,8 +86,7 @@ namespace std {
  template <>
  struct hash<folly::Uri> {
    std::size_t operator()(const folly::Uri& k) const {
 -    return std::hash<folly::uri_detail::UriTuple>{}(
-+    return folly::hasher<folly::uri_detail::UriTuple>{}(
-         folly::uri_detail::as_tuple(k));
+-        folly::uri_detail::as_tuple(k));
++    return folly::compute_std_tuple_hash(folly::uri_detail::as_tuple(k));
    }
  };
+ 
 diff --git a/folly/dynamic.cpp b/folly/dynamic.cpp
 index f145e2a46..be0c3e8be 100644
 --- a/folly/dynamic.cpp
@@ -139,18 +140,9 @@ index ede79429f..01008704e 100644
  // std::hash<std::string> is avalanching on libstdc++-v3 (code checked),
  // libc++ (code checked), and MSVC (based on online information).
 diff --git a/folly/hash/test/HashTest.cpp b/folly/hash/test/HashTest.cpp
-index e1b2c9f4a..1b72e5219 100644
+index e1b2c9f4a..98225c08e 100644
 --- a/folly/hash/test/HashTest.cpp
 +++ b/folly/hash/test/HashTest.cpp
-@@ -505,7 +505,7 @@ TEST(Hash, std_empty_tuple) {
-   m[{}] = "foo";
-   EXPECT_EQ(m[{}], "foo");
- 
--  folly::hasher<std::tuple<>> h;
-+  folly::std_tuple_hash<> h;
-   EXPECT_EQ(h({}), 0);
- }
- 
 @@ -761,26 +761,26 @@ static_assert(
  // these come from folly/hash/Hash.h
  static_assert(
@@ -183,41 +175,40 @@ index e1b2c9f4a..1b72e5219 100644
          std::tuple<int, int, int>>::value,
      "");
  
-@@ -858,28 +858,28 @@ static_assert(
-     "");
+@@ -859,27 +859,32 @@ static_assert(
  static_assert(
      folly::IsAvalanchingHasher<
--        folly::hasher<std::pair<int, int>>,
+         folly::hasher<std::pair<int, int>>,
 +        folly::std_pair_hash<int, int>,
          std::pair<int, int>>::value,
      "");
  static_assert(
      k32Bit ==
          folly::IsAvalanchingHasher<
--            folly::hasher<std::tuple<int>>,
+             folly::hasher<std::tuple<int>>,
 +            folly::std_tuple_hash<int>,
              std::tuple<int>>::value,
      "");
  static_assert(
      folly::IsAvalanchingHasher<
--        folly::hasher<std::tuple<std::string>>,
+         folly::hasher<std::tuple<std::string>>,
 +        folly::std_tuple_hash<std::string>,
          std::tuple<std::string>>::value,
      "");
  static_assert(
      folly::IsAvalanchingHasher<
--        folly::hasher<std::tuple<int, int>>,
+         folly::hasher<std::tuple<int, int>>,
 +        folly::std_tuple_hash<int, int>,
          std::tuple<int, int>>::value,
      "");
  static_assert(
      folly::IsAvalanchingHasher<
--        folly::hasher<std::tuple<int, int, int>>,
+         folly::hasher<std::tuple<int, int, int>>,
 +        folly::std_tuple_hash<int, int, int>,
          std::tuple<int, int, int>>::value,
      "");
  static_assert(
-@@ -950,12 +950,12 @@ void verifyAvalanching(T initialValue, F const& advance) {
+@@ -950,12 +955,12 @@ void verifyAvalanching(T initialValue, F const& advance) {
  } // namespace
  
  TEST(Traits, stdHashPairAvalances) {
