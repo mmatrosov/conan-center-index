@@ -64,6 +64,11 @@ class FollyConan(ConanFile):
         if self.version == "2020.08.10.00" and self.settings.compiler == "clang" and self.options.shared:
             raise ConanInvalidConfiguration("Folly could not be built by clang as a shared library")
 
+    def build_requirements(self):
+        # Freeze max. CMake version at 3.16.2 to fix the Linux build
+        if Version(self.version) <= "2020.08.10.00":
+            self.build_requires("cmake/3.16.2")
+
     def requirements(self):
         self.requires("boost/1.75.0")
         self.requires("bzip2/1.0.8")
@@ -103,11 +108,18 @@ class FollyConan(ConanFile):
         extracted_dir = self.name + "-" + self.version
         os.rename(extracted_dir, self._source_subfolder)
 
+    @property
+    def _cxx_std(self):
+      cppstd = self.settings.compiler.get_safe("cppstd") or "14"
+      if 'gnu' in cppstd:
+        return cppstd.replace('gnu', 'gnu++')
+      return 'c++' + cppstd
+
     def _configure_cmake(self):
         if not self._cmake:
             self._cmake = CMake(self)
             self._cmake.definitions["CMAKE_POSITION_INDEPENDENT_CODE"] = self.options.get_safe("fPIC", True)
-            self._cmake.definitions["CXX_STANDARD"] = self.settings.compiler.get_safe("cppstd") or "c++14"
+            self._cmake.definitions["CXX_STD"] = self._cxx_std
             if self.settings.compiler == "Visual Studio":
                 self._cmake.definitions["MSVC_ENABLE_ALL_WARNINGS"] = False
                 self._cmake.definitions["MSVC_USE_STATIC_RUNTIME"] = "MT" in self.settings.compiler.runtime
