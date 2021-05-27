@@ -1,3 +1,4 @@
+https://github.com/facebook/folly/pull/1587
 diff --git a/folly/Uri-inl.h b/folly/Uri-inl.h
 index bd286f525..118c3bb63 100644
 --- a/folly/Uri-inl.h
