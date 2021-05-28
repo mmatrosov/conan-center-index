@@ -77,7 +77,7 @@ class FollyConan(ConanFile):
         self.requires("glog/0.4.0")
         self.requires("libevent/2.1.12")
         self.requires("lz4/1.9.3")
-        self.requires("openssl/1.1.1i")
+        self.requires("openssl/1.1.1k")
         self.requires("snappy/1.1.8")
         self.requires("zlib/1.2.11")
         self.requires("zstd/1.4.8")
@@ -106,7 +106,7 @@ class FollyConan(ConanFile):
     def source(self):
         tools.get(**self.conan_data["sources"][self.version])
         extracted_dir = self.name + "-" + self.version
-        os.rename(extracted_dir, self._source_subfolder)
+        tools.rename(extracted_dir, self._source_subfolder)
 
     @property
     def _cxx_std(self):
