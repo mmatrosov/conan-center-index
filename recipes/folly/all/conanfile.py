@@ -104,16 +104,14 @@ class FollyConan(ConanFile):
             raise ConanInvalidConfiguration("Folly requires these boost components: {}".format(", ".join(self._required_boost_components)))
 
     def source(self):
-        tools.get(**self.conan_data["sources"][self.version])
-        extracted_dir = self.name + "-" + self.version
-        tools.rename(extracted_dir, self._source_subfolder)
+        tools.get(**self.conan_data["sources"][self.version], strip_root=True, destination=self._source_subfolder)
 
     @property
     def _cxx_std(self):
-      cppstd = self.settings.compiler.get_safe("cppstd") or "14"
-      if 'gnu' in cppstd:
-        return cppstd.replace('gnu', 'gnu++')
-      return 'c++' + cppstd
+        cppstd = self.settings.compiler.get_safe("cppstd") or "14"
+        if 'gnu' in cppstd:
+            return cppstd.replace('gnu', 'gnu++')
+        return 'c++' + cppstd
 
     def _configure_cmake(self):
         if not self._cmake:
