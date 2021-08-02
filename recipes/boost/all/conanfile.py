@@ -959,14 +959,8 @@ class BoostConan(ConanFile):
         if self.settings.get_safe("compiler.cppstd"):
             flags.append("cxxflags=%s" % cppstd_flag(self.settings))
 
-        # Experimental support for sanitizer options from profile ==> prone to breakage
-        # https://docs.conan.io/en/latest/howtos/sanitizers.html#adding-a-list-of-commonly-used-values
-        if self.settings.get_safe("compiler.sanitizer"):
-            # Remove "Behavior" from "UndefinedBehavior"
-            sanitizer = str(self.settings.compiler.sanitizer).replace("Behavior", "")
-            sanitizers = re.findall("[A-Z][a-z]+", sanitizer)
-            for sanitizer in sanitizers:
-                flags.append("%s-sanitizer=on" % sanitizer.lower())
+        for sanitizer in self._sanitizers:
+            flags.append("%s-sanitizer=on" % sanitizer)
 
         # LDFLAGS
         link_flags = []
@@ -1059,6 +1053,16 @@ class BoostConan(ConanFile):
             "-d%d" % self.options.debug_level,
         ])
         return flags
+
+    @property
+    def _sanitizers(self):
+        # Experimental support for sanitizer options from profile ==> prone to breakage
+        # https://docs.conan.io/en/latest/howtos/sanitizers.html#adding-a-list-of-commonly-used-values
+        if self.settings.get_safe("compiler.sanitizer"):
+            # Remove "Behavior" from "UndefinedBehavior"
+            sanitizer = str(self.settings.compiler.sanitizer).replace("Behavior", "")
+            return [sanitizer.lower() for sanitizer in re.findall("[A-Z][a-z]+", sanitizer)]
+        return []
 
     @property
     def _build_cross_flags(self):
@@ -1504,6 +1508,12 @@ class BoostConan(ConanFile):
             non_built = all_expected_libraries.difference(all_detected_libraries)
             if non_built:
                 raise ConanException("These libraries were expected to be built, but were not built: {}".format(non_built))
+
+            if not self.options.without_context:
+                if "address" in self._sanitizers:
+                    self.cpp_info.components["context"].defines.append("BOOST_USE_ASAN")
+                if "thread" in self._sanitizers:
+                    self.cpp_info.components["context"].defines.append("BOOST_USE_TSAN")
 
             if not self.options.without_stacktrace:
                 if self.settings.os in ("Linux", "FreeBSD"):
